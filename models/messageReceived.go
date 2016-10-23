@@ -11,7 +11,9 @@ import (
 type MessageAttachmentType int
 
 // APITime aliases time.Time to add custom parsing of unix timestamps
-type APITime time.Time
+type APITime struct {
+	Time time.Time
+}
 
 const (
 	// Image represents an image attachment
@@ -34,18 +36,18 @@ type WebhookMessageCallback struct {
 
 // WebhookMessageCallbackEntry represents messages delivered for a particular page
 type WebhookMessageCallbackEntry struct {
-	PageID    string                          `json:"id"`
-	UpdatedAt APITime                         `json:"time"`
-	Messages  []WebhookMessageCallbackMessage `json:"messaging"`
+	PageID   string `json:"id"`
+	APITime  `json:"time"`
+	Messages []WebhookMessageCallbackMessage `json:"messaging"`
 }
 
-// Unmarshal parses a unix time into APITime
-func (t APITime) Unmarshal(data []byte, into interface{}) error {
+// UnmarshalJSON parses a unix time into APITime
+func (t *APITime) UnmarshalJSON(data []byte) error {
 	u, err := strconv.ParseInt(string(data), 10, 64)
 	if err != nil {
 		return err
 	}
-	into = time.Unix(int64(u), 0)
+	t.Time = time.Unix(int64(u), 0)
 	return nil
 }
 
@@ -78,10 +80,7 @@ type WebhookMessageCallbackMessageAttachment struct {
 	Payload interface{}           `json:"payload"`
 }
 
-func (a WebhookMessageCallbackMessageAttachment) Unmarshal(data []byte, into interface{}) error {
-	if into == nil {
-		return errors.New("Invalid interface pointer")
-	}
+func (a WebhookMessageCallbackMessageAttachment) UnmarshalJSON(data []byte) error {
 	var strMap map[string]string
 	err := json.Unmarshal(data, &strMap)
 	if err != nil {
@@ -102,14 +101,16 @@ func (a WebhookMessageCallbackMessageAttachment) Unmarshal(data []byte, into int
 			Payload WebhookMessageCallbackMessageAttachmentMedia `json:"payload"`
 		}
 		err = json.Unmarshal(data, &s)
-		into = s
+		a.Type = s.Type
+		a.Payload = s.Payload
 	case "location":
 		var s struct {
 			Type    MessageAttachmentType                           `json:"type"`
 			Payload WebhookMessageCallbackMessageAttachmentLocation `json:"payload"`
 		}
 		err = json.Unmarshal(data, &s)
-		into = s
+		a.Type = s.Type
+		a.Payload = s.Payload
 	}
 	if err != nil {
 		return err
