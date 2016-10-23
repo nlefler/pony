@@ -40,7 +40,7 @@ type WebhookMessageCallbackEntry struct {
 }
 
 // Unmarshal parses a unix time into APITime
-func (t *APITime) Unmarshal(data []byte, into interface{}) error {
+func (t APITime) Unmarshal(data []byte, into interface{}) error {
 	u, err := strconv.ParseInt(string(data), 10, 64)
 	if err != nil {
 		return err
