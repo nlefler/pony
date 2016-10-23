@@ -36,8 +36,8 @@ type WebhookMessageCallback struct {
 
 // WebhookMessageCallbackEntry represents messages delivered for a particular page
 type WebhookMessageCallbackEntry struct {
-	PageID   string `json:"id"`
-	APITime  `json:"time"`
+	PageID   string                          `json:"id"`
+	Time     APITime                         `json:"time"`
 	Messages []WebhookMessageCallbackMessage `json:"messaging"`
 }
 
@@ -54,6 +54,7 @@ func (t *APITime) UnmarshalJSON(data []byte) error {
 // WebhookMessageCallbackMessage exposes message information on any message type
 type WebhookMessageCallbackMessage struct {
 	webhookMessageCallbackMessageParties
+	APITime `json:"timestamp"`
 	Message WebhookMessageCallbackMessageRecieved `json:"message,omitempty"`
 }
 
@@ -71,8 +72,8 @@ type WebhookMessageCallbackMessageRecieved struct {
 	ID          string                                    `json:"mid"`
 	Sequence    int                                       `json:"seq"`
 	Text        string                                    `json:"text"`
-	Attachments []WebhookMessageCallbackMessageAttachment `json:"attachment"`
-	QuickReply  WebhookMessageCallbackMessageQuickReply   `json:"quick_reply"`
+	Attachments []WebhookMessageCallbackMessageAttachment `json:"attachment,omitempty"`
+	QuickReply  WebhookMessageCallbackMessageQuickReply   `json:"quick_reply,omitempty"`
 }
 
 type WebhookMessageCallbackMessageAttachment struct {
