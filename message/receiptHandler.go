@@ -11,9 +11,11 @@ import (
 
 // ReceiptHandler handles message events
 type ReceiptHandler struct {
+	Received chan models.ReceivedMessage
 }
 
-func (rh *ReceiptHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+// Handle handles a reeived message
+func (rh *ReceiptHandler) Handle(w http.ResponseWriter, req *http.Request) {
 	jsonBytes, err := ioutil.ReadAll(req.Body)
 	if len(jsonBytes) == 0 || err != nil {
 		log.Printf("message.receiptHandler.ReceiptHandler.ServeHTTP: Can't parse request %v", err)
@@ -31,14 +33,15 @@ func (rh *ReceiptHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	for _, page := range call.Entries {
 		log.Printf("message.receiptHandler.ReceiptHandler.ServeHTTP: Handling page %s", page.PageID)
 		for _, msg := range page.Messages {
-			go dispatch(msg)
+			go dispatch(rh, msg)
 		}
 	}
 	w.WriteHeader(http.StatusOK)
 }
 
-func dispatch(msg models.WebhookMessageCallbackMessage) {
+func dispatch(rh *ReceiptHandler, msg models.ReceivedMessage) {
 	if msg.Message.ID != "" {
 		log.Printf("message.receiptHandler.ReceiptHandler.ServeHTTP: Message %s", msg.Message.Text)
 	}
+	rh.Received <- msg
 }

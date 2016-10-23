@@ -5,16 +5,28 @@ import (
 	"net/http"
 
 	"github.com/nlefler/pony/message"
+	"github.com/nlefler/pony/models"
 )
 
 // Pony receives webhook messages and delegates
 type Pony struct {
 	validationToken string
+	receiptHandler  *message.ReceiptHandler
 }
 
 // New constructs a new Pony
 func New(validationToken string) *Pony {
-	return &Pony{validationToken}
+	return &Pony{validationToken, &message.ReceiptHandler{}}
+}
+
+// SetMessageReceived replaces the channel received messages will be sent to
+func (p *Pony) SetMessageReceived(ch chan models.ReceivedMessage) {
+	p.receiptHandler.Received = ch
+}
+
+// SendMessage sends a message
+func SendMessage(msg models.OutgoingMessage) {
+
 }
 
 // AddRoutes adds webhook routes to the provided ServeMux
@@ -36,8 +48,7 @@ func webhookDispatcher(p *Pony, w http.ResponseWriter, req *http.Request) {
 	case "GET":
 		webhookValidate(p, w, req)
 	case "POST":
-		handler := message.ReceiptHandler{}
-		handler.ServeHTTP(w, req)
+		p.receiptHandler.Handle(w, req)
 	default:
 		w.WriteHeader(http.StatusOK)
 	}

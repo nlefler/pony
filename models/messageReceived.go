@@ -8,7 +8,7 @@ import (
 )
 
 // MessageAttachmentType is the type of a media attachment
-type MessageAttachmentType int
+type MessageAttachmentType string
 
 // APITime aliases time.Time to add custom parsing of unix timestamps
 type APITime struct {
@@ -17,15 +17,15 @@ type APITime struct {
 
 const (
 	// Image represents an image attachment
-	Image MessageAttachmentType = iota
+	Image MessageAttachmentType = "image"
 	// Audio represents an audio attachment
-	Audio MessageAttachmentType = iota
+	Audio MessageAttachmentType = "audio"
 	// Video represents an video attachment
-	Video MessageAttachmentType = iota
+	Video MessageAttachmentType = "video"
 	// File represents an file attachment
-	File MessageAttachmentType = iota
+	File MessageAttachmentType = "file"
 	// Location represents an location attachment
-	Location MessageAttachmentType = iota
+	Location MessageAttachmentType = "location"
 )
 
 // WebhookMessageCallback represents the webhook callback
@@ -36,9 +36,9 @@ type WebhookMessageCallback struct {
 
 // WebhookMessageCallbackEntry represents messages delivered for a particular page
 type WebhookMessageCallbackEntry struct {
-	PageID   string                          `json:"id"`
-	Time     APITime                         `json:"time"`
-	Messages []WebhookMessageCallbackMessage `json:"messaging"`
+	PageID   string            `json:"id"`
+	Time     APITime           `json:"time"`
+	Messages []ReceivedMessage `json:"messaging"`
 }
 
 // UnmarshalJSON parses a unix time into APITime
@@ -51,21 +51,16 @@ func (t *APITime) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// WebhookMessageCallbackMessage exposes message information on any message type
-type WebhookMessageCallbackMessage struct {
+// ReceivedMessage exposes message information on any message type
+type ReceivedMessage struct {
 	webhookMessageCallbackMessageParties
 	APITime `json:"timestamp"`
 	Message WebhookMessageCallbackMessageRecieved `json:"message,omitempty"`
 }
 
-// WebhookMessageCallbackMessageParty represents a party in a conversation
-type WebhookMessageCallbackMessageParty struct {
-	ID string `json:"id"`
-}
-
 type webhookMessageCallbackMessageParties struct {
-	Sender    WebhookMessageCallbackMessageParty `json:"sender"`
-	Recipient WebhookMessageCallbackMessageParty `json:"recipient"`
+	Sender    MessageParty `json:"sender"`
+	Recipient MessageParty `json:"recipient"`
 }
 
 type WebhookMessageCallbackMessageRecieved struct {
