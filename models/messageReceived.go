@@ -3,11 +3,15 @@ package models
 import (
 	"encoding/json"
 	"errors"
+	"strconv"
 	"time"
 )
 
 // MessageAttachmentType is the type of a media attachment
 type MessageAttachmentType int
+
+// APITime aliases time.Time to add custom parsing of unix timestamps
+type APITime time.Time
 
 const (
 	// Image represents an image attachment
@@ -31,8 +35,18 @@ type WebhookMessageCallback struct {
 // WebhookMessageCallbackEntry represents messages delivered for a particular page
 type WebhookMessageCallbackEntry struct {
 	PageID    string                          `json:"id"`
-	UpdatedAt time.Time                       `json:"time"`
+	UpdatedAt APITime                         `json:"time"`
 	Messages  []WebhookMessageCallbackMessage `json:"messaging"`
+}
+
+// Unmarshal parses a unix time into APITime
+func (t *APITime) Unmarshal(data []byte, into interface{}) error {
+	u, err := strconv.ParseInt(string(data), 10, 64)
+	if err != nil {
+		return err
+	}
+	into = time.Unix(int64(u), 0)
+	return nil
 }
 
 // WebhookMessageCallbackMessage exposes message information on any message type
