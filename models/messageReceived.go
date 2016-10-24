@@ -54,7 +54,7 @@ func (t *APITime) UnmarshalJSON(data []byte) error {
 // ReceivedMessage exposes message information on any message type
 type ReceivedMessage struct {
 	webhookMessageCallbackMessageParties
-	APITime `json:"timestamp"`
+	Time    APITime                               `json:"timestamp"`
 	Message WebhookMessageCallbackMessageRecieved `json:"message,omitempty"`
 }
 

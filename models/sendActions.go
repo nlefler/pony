@@ -12,14 +12,20 @@ const (
 	TypingOff senderActionType = "typing_off"
 )
 
-// senderAction is a non-message related action
-type senderAction struct {
+// SenderAction is a non-message related action
+type SenderAction struct {
 	Action    senderActionType `json:"sender_action"`
 	Recipient MessageParty     `json:"recipient"`
 }
 
 // OutgoingMessage is a placeholder for one of OutgoingTextMessage
 type OutgoingMessage interface{}
+
+// OutgoingMessagePayload wraps a message to send
+type OutgoingMessagePayload struct {
+	Recipient MessageParty    `json:"recipient"`
+	Message   OutgoingMessage `json:"message"`
+}
 
 // OutgoingTextMessage holds a message to send
 type OutgoingTextMessage struct {
