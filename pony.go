@@ -10,31 +10,24 @@ import (
 
 // Pony receives webhook messages and delegates
 type Pony struct {
-	validationToken string
-	pageToken       string
-	receiptHandler  *message.ReceiptHandler
-	sender          *message.Sender
+	receiptHandler  *ReceiptHandler
+	sender          *Sender
 }
 
-// New constructs a new Pony
-func New(validationToken string, pageAccessToken string) *Pony {
-	return &Pony{validationToken, pageAccessToken, &message.ReceiptHandler{}, message.NewSender(pageAccessToken)}
-}
 
 // SetMessageReceived replaces the channel received messages will be sent to
-func (p *Pony) SetMessageReceived(ch chan models.ReceivedMessage) {
+func (p *Pony) SetMessageReceived(ch chan ReceivedMessage) {
 	p.receiptHandler.Received = ch
 }
 
 // SendMessage sends a message
-func (p *Pony) SendMessage(recipient models.MessageParty, msg models.OutgoingMessage) {
+func (p *Pony) SendMessage(recipient MessageParty, msg OutgoingMessage) {
 	p.sender.Send(recipient, msg)
 }
 
 // AddRoutes adds webhook routes to the provided ServeMux
 func (p *Pony) AddRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("/webhook", makeHandler(p, webhookDispatcher))
-	mux.HandleFunc("/authorize", makeHandler(p, authorizeHandler))
+
 	mux.HandleFunc("/up", func(w http.ResponseWriter, req *http.Request) { w.Write([]byte("UP")) })
 }
 

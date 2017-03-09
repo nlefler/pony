@@ -1,4 +1,4 @@
-package message
+package pony
 
 import (
 	"encoding/json"
@@ -11,7 +11,7 @@ import (
 
 // ReceiptHandler handles message events
 type ReceiptHandler struct {
-	Received chan models.ReceivedMessage
+	Received chan ReceivedMessage
 }
 
 // Handle handles a reeived message
@@ -23,7 +23,7 @@ func (rh *ReceiptHandler) Handle(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	var call models.WebhookMessageCallback
+	var call WebhookMessageCallback
 	if err := json.Unmarshal(jsonBytes, &call); err != nil {
 		log.Printf("message.receiptHandler.ReceiptHandler.ServeHTTP: Can't parse request %v", err)
 		w.WriteHeader(http.StatusOK)
@@ -39,7 +39,7 @@ func (rh *ReceiptHandler) Handle(w http.ResponseWriter, req *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func dispatch(rh *ReceiptHandler, msg models.ReceivedMessage) {
+func dispatch(rh *ReceiptHandler, msg ReceivedMessage) {
 	if msg.Message.ID != "" {
 		log.Printf("message.receiptHandler.ReceiptHandler.ServeHTTP: Message %s", msg.Message.Text)
 	}

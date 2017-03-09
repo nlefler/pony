@@ -1,4 +1,4 @@
-package message
+package pony
 
 import (
 	"bytes"
@@ -27,8 +27,8 @@ func NewSender(pageToken string) *Sender {
 }
 
 // Send sends a message
-func (s *Sender) Send(recipient models.MessageParty, message models.OutgoingMessage) {
-	payload := models.OutgoingMessagePayload{Recipient: recipient, Message: message}
+func (s *Sender) Send(recipient MessageParty, message OutgoingMessage) {
+	payload := OutgoingMessagePayload{Recipient: recipient, Message: message}
 	payloadData, err := json.Marshal(payload)
 	if err != nil {
 		log.Printf("message.sendHandler.Send Error marshaling %v", err)

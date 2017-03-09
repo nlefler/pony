@@ -1,4 +1,4 @@
-package models
+package pony
 
 // SenderActionType is a non-message related action
 type senderActionType string

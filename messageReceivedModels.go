@@ -1,4 +1,4 @@
-package models
+package pony
 
 import (
 	"encoding/json"
