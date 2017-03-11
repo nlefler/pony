@@ -1,11 +1,7 @@
 package pony
 
 import (
-	"log"
 	"net/http"
-
-	"github.com/nlefler/pony/message"
-	"github.com/nlefler/pony/models"
 )
 
 // Pony receives webhook messages and delegates

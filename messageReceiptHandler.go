@@ -1,12 +1,8 @@
 package pony
 
 import (
-	"encoding/json"
-	"io/ioutil"
 	"log"
 	"net/http"
-
-	"github.com/nlefler/pony/models"
 )
 
 // ReceiptHandler handles message events

@@ -7,8 +7,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-
-	"github.com/nlefler/pony/models"
 )
 
 const (

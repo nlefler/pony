@@ -22,7 +22,7 @@ func (wh *FacebookMessengerWebhook) receive(rmsg ReceivedMessage) {
 
 func (wh *FacebookMessengerWebhook) addRoutes(mux *http.ServeMux) {
 	makeHandler := func (wh *FacebookMessengerWebhook,
-		handler func(webhook *FacebookMessengerWebhook, http.ResponseWriter, *http.Request)) http.HandlerFunc {
+		handler func(*FacebookMessengerWebhook, http.ResponseWriter, *http.Request)) http.HandlerFunc {
 		return func(w http.ResponseWriter, req *http.Request) {
 			handler(wh, w, req)
 		}
