@@ -1,42 +1,40 @@
 package pony
 
 import (
-	"net/http"
-	"log"
+	"fmt"
 	"io/ioutil"
+	"log"
+	"net/http"
 )
 
-type FacebookMessengerWebhook struct {
+type facebookMessengerWebhook struct {
+	webhookPrefix   string
 	validationToken string
-	pageToken string
-	decoder *FacebookMessengerDecoder
+	pageToken       string
+	decoder         *FacebookMessengerDecoder
 }
 
-func NewFacebookMessengerWebhook(validationToken string, pageToken string, decoder *FacebookMessengerDecoder) *FacebookMessengerWebhook {
-	return &FacebookMessengerWebhook{validationToken, pageToken, decoder}
+func NewFacebookMessengerWebhook(pageName string, validationToken string, pageToken string, decoder *FacebookMessengerDecoder) Webhook {
+	return &facebookMessengerWebhook{pageName, validationToken, pageToken, decoder}
 }
 
-func (wh *FacebookMessengerWebhook) receive(rmsg ReceivedMessage) {
-
-}
-
-func (wh *FacebookMessengerWebhook) addRoutes(mux *http.ServeMux) {
-	makeHandler := func (wh *FacebookMessengerWebhook,
-		handler func(*FacebookMessengerWebhook, http.ResponseWriter, *http.Request)) http.HandlerFunc {
+func (wh *facebookMessengerWebhook) addRoutes(mux *http.ServeMux) {
+	makeHandler := func(wh *facebookMessengerWebhook,
+		handler func(*facebookMessengerWebhook, http.ResponseWriter, *http.Request)) http.HandlerFunc {
 		return func(w http.ResponseWriter, req *http.Request) {
 			handler(wh, w, req)
 		}
 	}
-	mux.HandleFunc("/webhook", makeHandler(wh, facebookWebhookDispatcher))
-	mux.HandleFunc("/authorize", makeHandler(wh, facebookAuthorizeHandler))
+	mux.HandleFunc(fmt.Sprintf("%s/webhook", wh.webhookPrefix), makeHandler(wh, facebookWebhookDispatcher))
+	mux.HandleFunc(fmt.Sprintf("%s/authorize", wh.webhookPrefix), makeHandler(wh, facebookAuthorizeHandler))
 }
 
-func facebookAuthorizeHandler(wh *FacebookMessengerWebhook, w http.ResponseWriter, req *http.Request) {
+func facebookAuthorizeHandler(wh *facebookMessengerWebhook, w http.ResponseWriter, req *http.Request) {
 	log.Println("pony.pony.authorize")
 	w.WriteHeader(http.StatusOK)
 }
 
-func facebookWebhookDispatcher(wh *FacebookMessengerWebhook, w http.ResponseWriter, req *http.Request) {
+func facebookWebhookDispatcher(wh *facebookMessengerWebhook, w http.ResponseWriter, req *http.Request) {
 	// TODO(nl): verify signature
 	switch req.Method {
 	case "GET":
@@ -54,7 +52,7 @@ func facebookWebhookDispatcher(wh *FacebookMessengerWebhook, w http.ResponseWrit
 	}
 }
 
-func facebookWebhookValidate(wh *FacebookMessengerWebhook, w http.ResponseWriter, req *http.Request) {
+func facebookWebhookValidate(wh *facebookMessengerWebhook, w http.ResponseWriter, req *http.Request) {
 	mode := req.FormValue("hub.mode")
 	if mode != "subscribe" {
 		log.Printf("pony.pony.validate Failed, mode is %s", mode)

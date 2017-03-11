@@ -5,29 +5,33 @@ type MessageParty interface {
 	ID() string
 }
 
-// MessageContentType represents the content type of a message
-type MessageContentType string
+// MessageAttachmentContentType represents the content type of a message attachment
+type MessageAttachmentContentType string
 
 const (
-	// MessageContentTypeText represents a text attachment
-	MessageContentTypeText MessageContentType = "text"
-	// MessageContentTypeImage represents an image attachment
-	MessageContentTypeImage MessageContentType = "image"
-	// MessageContentTypeAudio represents an audio attachment
-	MessageContentTypeAudio MessageContentType = "audio"
-	// MessageContentTypeVideo represents an video attachment
-	MessageContentTypeVideo MessageContentType = "video"
-	// MessageContentTypeFile represents an file attachment
-	MessageContentTypeFile MessageContentType = "file"
-	// MessageContentTypeLocation represents an location attachment
-	MessageContentTypeLocation MessageContentType = "location"
+	// MessageAttachmentContentTypeImage represents an image attachment
+	MessageAttachmentContentTypeImage MessageAttachmentContentType = "image"
+	// MessageAttachmentContentTypeAudio represents an audio attachment
+	MessageAttachmentContentTypeAudio MessageAttachmentContentType = "audio"
+	// MessageAttachmentContentTypeVideo represents an video attachment
+	MessageAttachmentContentTypeVideo MessageAttachmentContentType = "video"
+	// MessageAttachmentContentTypeFile represents an file attachment
+	MessageAttachmentContentTypeFile MessageAttachmentContentType = "file"
+	// MessageAttachmentContentTypeLocation represents an location attachment
+	MessageAttachmentContentTypeLocation MessageAttachmentContentType = "location"
 )
+
+// MessageAttachment is extra content in a message
+type MessageAttachment interface {
+	Type() MessageAttachmentContentType
+	Payload() interface{}
+}
 
 // Message is a Message
 type Message interface {
-	Id() string
+	ID() string
 	Sender() MessageParty
 	Recipients() []MessageParty
-	Content() interface{}
-	ContentType() MessageContentType
+	Text() string
+	Attachments() []MessageAttachment
 }

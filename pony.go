@@ -6,13 +6,15 @@ import (
 
 // Pony receives webhook messages and delegates
 type Pony struct {
-	receiptHandler  *ReceiptHandler
-	sender          *Sender
+	sender *Sender
 }
 
+func NewPony() *Pony {
+	return &Pony{}
+}
 
 // SetMessageReceived replaces the channel received messages will be sent to
-func (p *Pony) SetMessageReceived(ch chan ReceivedMessage) {
+func (p *Pony) SetMessageReceived(ch chan Message) {
 	p.receiptHandler.Received = ch
 }
 
