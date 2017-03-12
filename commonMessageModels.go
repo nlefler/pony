@@ -35,3 +35,21 @@ type Message interface {
 	Text() string
 	Attachments() []MessageAttachment
 }
+
+// SenderActionType is a non-message related action
+type senderActionType string
+
+const (
+	// MarkSeen a received message as read
+	MarkSeen senderActionType = "mark_seen"
+	// TypingOn shows the typing indicator
+	TypingOn senderActionType = "typing_on"
+	// TypingOff disables the typing indicator
+	TypingOff senderActionType = "typing_off"
+)
+
+// SenderAction is a non-message related action
+type SenderAction struct {
+	Action    senderActionType `json:"sender_action"`
+	Recipient MessageParty     `json:"recipient"`
+}

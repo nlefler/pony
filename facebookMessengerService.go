@@ -1,18 +1,132 @@
 package pony
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io/ioutil"
 	"log"
+	"net/http"
 	"strconv"
 	"time"
 )
 
-// FacebookMessengerDecoder translates Facebook Messenger messages
-type FacebookMessengerDecoder struct {
+/// Service
+
+type facebookMessenger struct {
+	id      string
+	webhook *facebookMessengerWebhook
 }
 
-func (decoder *FacebookMessengerDecoder) receive(msgData []byte) ([]Message, error) {
+func NewFacebookMessenger(pageName string, validationToken string, pageToken string) Service {
+	id := fmt.Sprintf("com.pony.facebook.messenger.%s", pageName)
+	webhook := &facebookMessengerWebhook{pageName, validationToken, pageToken, &facebookMessengerDecoder{}, make(chan *Message, 100)}
+	return &facebookMessenger{id, webhook}
+}
+
+func (fb *facebookMessenger) Setup(mux *http.ServeMux) {
+	fb.webhook.addRoutes(mux)
+}
+
+func (fb *facebookMessenger) ID() string {
+	return fb.id
+}
+
+func (fb *facebookMessenger) Send(to MessageParty, msg Message) {
+
+}
+
+func (fb *facebookMessenger) ReceiveOn() <-chan *Message {
+	return fb.webhook.receiveOn
+}
+
+/// Webhook
+
+type facebookMessengerWebhook struct {
+	webhookPrefix   string
+	validationToken string
+	pageToken       string
+	decoder         *facebookMessengerDecoder
+	receiveOn       chan *Message
+}
+
+func (wh *facebookMessengerWebhook) addRoutes(mux *http.ServeMux) {
+	makeHandler := func(wh *facebookMessengerWebhook,
+		handler func(*facebookMessengerWebhook, http.ResponseWriter, *http.Request)) http.HandlerFunc {
+		return func(w http.ResponseWriter, req *http.Request) {
+			handler(wh, w, req)
+		}
+	}
+	mux.HandleFunc(fmt.Sprintf("%s/webhook", wh.webhookPrefix), makeHandler(wh, facebookWebhookDispatcher))
+	mux.HandleFunc(fmt.Sprintf("%s/authorize", wh.webhookPrefix), makeHandler(wh, facebookAuthorizeHandler))
+}
+
+func facebookAuthorizeHandler(wh *facebookMessengerWebhook, w http.ResponseWriter, req *http.Request) {
+	log.Println("pony.pony.authorize")
+	w.WriteHeader(http.StatusOK)
+}
+
+func facebookWebhookDispatcher(wh *facebookMessengerWebhook, w http.ResponseWriter, req *http.Request) {
+	// TODO(nl): verify signature
+	switch req.Method {
+	case "GET":
+		facebookWebhookValidate(wh, w, req)
+	case "POST":
+		jsonBytes, err := ioutil.ReadAll(req.Body)
+		if len(jsonBytes) == 0 || err != nil {
+			log.Printf("message.receiptHandler.ReceiptHandler.ServeHTTP: Can't parse request %v", err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		messages, err := wh.decoder.receive(jsonBytes)
+		if err != nil {
+			log.Printf("%v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		for _, m := range messages {
+			wh.receiveOn <- &m
+		}
+	default:
+		w.WriteHeader(http.StatusOK)
+	}
+}
+
+func facebookWebhookValidate(wh *facebookMessengerWebhook, w http.ResponseWriter, req *http.Request) {
+	mode := req.FormValue("hub.mode")
+	if mode != "subscribe" {
+		log.Printf("pony.pony.validate Failed, mode is %s", mode)
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	token := req.FormValue("hub.verify_token")
+	if token != wh.validationToken {
+		log.Printf("pony.pony.validate Failed, token is %s", token)
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	challenge := req.FormValue("hub.challenge")
+	if challenge == "" {
+		log.Printf("pony.pony.validate Failed, no challenge")
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	log.Printf("pony.pony.validate Validated")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(challenge))
+	return
+}
+
+/// Decoder
+
+type facebookMessengerDecoder struct {
+}
+
+func (decoder *facebookMessengerDecoder) receive(msgData []byte) ([]Message, error) {
 	var call facebookMessengerWebhookMessageCallback
 	if err := json.Unmarshal(msgData, &call); err != nil {
 		log.Printf("message.receiptHandler.ReceiptHandler.ServeHTTP: Can't parse request %v", err)
@@ -208,4 +322,54 @@ type facebookMessengerWebhookMessageCallbackMessageAttachmentLocationCoordinate 
 
 type facebookMessengerWebhookMessageCallbackMessageQuickReply struct {
 	Payload map[string]interface{} `json:"payload"`
+}
+
+/// Sender
+
+const (
+	facebookMessengerSendURLFormat = "https://graph.facebook.com/v2.6/me/messages?access_token=%s"
+)
+
+type facebookMessengerSender struct {
+	pageToken string
+	sendURL   string
+}
+
+func newFacebookMessengerSender(pageToken string) facebookMessengerSender {
+	return facebookMessengerSender{pageToken, fmt.Sprintf(sendURLFormat, pageToken)}
+}
+
+// Send sends a message
+func (s *facebookMessengerSender) send(recipient MessageParty, message Message) {
+	// TODO(nl): Recipients
+	textMessage = outgoingTextMessage{message.Text}
+	payload := OutgoingMessagePayload{message.Recipients[0], textMessage}
+	payloadData, err := json.Marshal(payload)
+	if err != nil {
+		log.Printf("message.sendHandler.Send Error marshaling %v", err)
+		return
+	}
+	payloadReader := bytes.NewBuffer(payloadData)
+	resp, err := http.Post(s.sendURL, "application/json", payloadReader)
+	if err != nil {
+		log.Printf("message.sendHandler.Send Error sending %v", err)
+		return
+	}
+	respData, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("message.sendHandler.Send Error reading response %v", err)
+		return
+	}
+	log.Printf("message.sendHandler.Send Got response %v", string(respData))
+}
+
+type outgoingMessage interface{}
+
+type outgoingMessagePayload struct {
+	Recipient MessageParty    `json:"recipient"`
+	Message   outgoingMessage `json:"message"`
+}
+
+type outgoingTextMessage struct {
+	Text string `json:"text"`
 }
