@@ -17,12 +17,14 @@ import (
 type facebookMessenger struct {
 	id      string
 	webhook *facebookMessengerWebhook
+	sender  *facebookMessengerSender
 }
 
 func NewFacebookMessenger(pageName string, validationToken string, pageToken string) Service {
 	id := fmt.Sprintf("com.pony.facebook.messenger.%s", pageName)
 	webhook := &facebookMessengerWebhook{pageName, validationToken, pageToken, &facebookMessengerDecoder{}, make(chan *Message, 100)}
-	return &facebookMessenger{id, webhook}
+	sender := newFacebookMessengerSender(pageToken)
+	return &facebookMessenger{id, webhook, &sender}
 }
 
 func (fb *facebookMessenger) Setup(mux *http.ServeMux) {
@@ -33,7 +35,7 @@ func (fb *facebookMessenger) ID() string {
 	return fb.id
 }
 
-func (fb *facebookMessenger) Send(to MessageParty, msg Message) {
+func (fb *facebookMessenger) Send(msg Message) {
 
 }
 
@@ -336,14 +338,14 @@ type facebookMessengerSender struct {
 }
 
 func newFacebookMessengerSender(pageToken string) facebookMessengerSender {
-	return facebookMessengerSender{pageToken, fmt.Sprintf(sendURLFormat, pageToken)}
+	return facebookMessengerSender{pageToken, fmt.Sprintf(facebookMessengerSendURLFormat, pageToken)}
 }
 
 // Send sends a message
 func (s *facebookMessengerSender) send(recipient MessageParty, message Message) {
 	// TODO(nl): Recipients
-	textMessage = outgoingTextMessage{message.Text}
-	payload := OutgoingMessagePayload{message.Recipients[0], textMessage}
+	textMessage := outgoingTextMessage{message.Text()}
+	payload := outgoingMessagePayload{message.Recipients()[0], textMessage}
 	payloadData, err := json.Marshal(payload)
 	if err != nil {
 		log.Printf("message.sendHandler.Send Error marshaling %v", err)

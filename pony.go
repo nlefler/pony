@@ -2,15 +2,22 @@ package pony
 
 // Pony receives webhook messages and delegates
 type Pony struct {
-	sender   *Sender
-	services []Service
+	sender   MessageParty
+	services map[string]Service
 }
 
-func NewPony(sender *Sender) *Pony {
-	return &Pony{sender, make([]Service, 1)}
+func NewPony(sender MessageParty) *Pony {
+	return &Pony{sender, make(map[string]Service)}
+}
+
+func (p *Pony) AddService(service Service) {
+	p.services[service.ID()] = service
 }
 
 // SendMessage sends a message
-func (p *Pony) SendMessage(recipient MessageParty, msg OutgoingMessage, serviceID string) {
-	p.sender.Send(recipient, msg)
+func (p *Pony) SendMessage(msg Message, serviceID string) {
+	s, ok := p.services[serviceID]
+	if ok {
+		s.Send(msg)
+	}
 }
