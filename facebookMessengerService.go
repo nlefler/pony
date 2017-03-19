@@ -22,7 +22,7 @@ type facebookMessenger struct {
 
 func NewFacebookMessenger(pageName string, validationToken string, pageToken string) Service {
 	id := fmt.Sprintf("com.pony.facebook.messenger.%s", pageName)
-	webhook := &facebookMessengerWebhook{pageName, validationToken, pageToken, &facebookMessengerDecoder{}, make(chan *Message, 100)}
+	webhook := &facebookMessengerWebhook{pageName, validationToken, pageToken, &facebookMessengerDecoder{}, make(chan Message, 100)}
 	sender := newFacebookMessengerSender(pageToken)
 	return &facebookMessenger{id, webhook, &sender}
 }
@@ -39,7 +39,7 @@ func (fb *facebookMessenger) Send(msg Message) {
 
 }
 
-func (fb *facebookMessenger) ReceiveOn() <-chan *Message {
+func (fb *facebookMessenger) ReceiveOn() <-chan Message {
 	return fb.webhook.receiveOn
 }
 
@@ -50,18 +50,19 @@ type facebookMessengerWebhook struct {
 	validationToken string
 	pageToken       string
 	decoder         *facebookMessengerDecoder
-	receiveOn       chan *Message
+	receiveOn       chan Message
 }
 
 func (wh *facebookMessengerWebhook) addRoutes(mux *http.ServeMux) {
+	log.Printf("fb add routes %s\n", wh.webhookPrefix)
 	makeHandler := func(wh *facebookMessengerWebhook,
 		handler func(*facebookMessengerWebhook, http.ResponseWriter, *http.Request)) http.HandlerFunc {
 		return func(w http.ResponseWriter, req *http.Request) {
 			handler(wh, w, req)
 		}
 	}
-	mux.HandleFunc(fmt.Sprintf("%s/webhook", wh.webhookPrefix), makeHandler(wh, facebookWebhookDispatcher))
-	mux.HandleFunc(fmt.Sprintf("%s/authorize", wh.webhookPrefix), makeHandler(wh, facebookAuthorizeHandler))
+	mux.HandleFunc(fmt.Sprintf("/%s/webhook", wh.webhookPrefix), makeHandler(wh, facebookWebhookDispatcher))
+	mux.HandleFunc(fmt.Sprintf("/%s/authorize", wh.webhookPrefix), makeHandler(wh, facebookAuthorizeHandler))
 }
 
 func facebookAuthorizeHandler(wh *facebookMessengerWebhook, w http.ResponseWriter, req *http.Request) {
@@ -75,22 +76,27 @@ func facebookWebhookDispatcher(wh *facebookMessengerWebhook, w http.ResponseWrit
 	case "GET":
 		facebookWebhookValidate(wh, w, req)
 	case "POST":
+		log.Printf("%s: POST", wh.webhookPrefix)
 		jsonBytes, err := ioutil.ReadAll(req.Body)
 		if len(jsonBytes) == 0 || err != nil {
 			log.Printf("message.receiptHandler.ReceiptHandler.ServeHTTP: Can't parse request %v", err)
 			w.WriteHeader(http.StatusBadRequest)
+			log.Printf("%s: 400 %v", wh.webhookPrefix, err)
 			return
 		}
 		messages, err := wh.decoder.receive(jsonBytes)
 		if err != nil {
 			log.Printf("%v", err)
+			log.Printf("%s: 500 %v", wh.webhookPrefix, err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
 		for _, m := range messages {
-			wh.receiveOn <- &m
+			log.Printf("%s: Message %v", wh.webhookPrefix, m)
+			wh.receiveOn <- m
 		}
+		w.WriteHeader(http.StatusOK)
 	default:
 		w.WriteHeader(http.StatusOK)
 	}
@@ -135,10 +141,11 @@ func (decoder *facebookMessengerDecoder) receive(msgData []byte) ([]Message, err
 		return nil, errors.New("Cannot parse")
 	}
 
-	messages := make([]Message, len(call.Entries))
+	messages := make([]Message, 0, len(call.Entries))
 	for _, page := range call.Entries {
 		log.Printf("message.receiptHandler.ReceiptHandler.ServeHTTP: Handling page %s", page.PageID)
 		for _, fbMsg := range page.Messages {
+			log.Printf("message.receiptHandler.ReceiptHandler.ServeHTTP: Handling page %s, message; %v", page.PageID, fbMsg)
 			messages = append(messages, fbMsg)
 		}
 	}
@@ -158,11 +165,11 @@ func (m facebookMessengerReceivedMessage) ID() string {
 }
 
 func (m facebookMessengerReceivedMessage) Sender() MessageParty {
-	return m.Sender()
+	return m.FBSender
 }
 
 func (m facebookMessengerReceivedMessage) Recipients() []MessageParty {
-	return []MessageParty{m.Recipient}
+	return []MessageParty{m.FBRecipient}
 }
 
 func (m facebookMessengerReceivedMessage) Text() string {
@@ -203,12 +210,16 @@ func (a facebookMessengerWebhookMessageCallbackMessageAttachment) Payload() inte
 	return a.AttachmentPayload
 }
 
+type FacebookMessengerParty interface {
+	FacebookMessengerID() string
+}
+
 type facebookMessengerMessageParty struct {
 	FacebookUserID string `json:"id"`
 }
 
 // MessageParty
-func (p facebookMessengerMessageParty) ID() string {
+func (p facebookMessengerMessageParty) FacebookMessengerID() string {
 	return p.FacebookUserID
 }
 
@@ -259,8 +270,8 @@ func (t *facebookMessengerAPITime) UnmarshalJSON(data []byte) error {
 }
 
 type facebookMessengerWebhookMessageCallbackMessageParties struct {
-	Sender    facebookMessengerMessageParty `json:"sender"`
-	Recipient facebookMessengerMessageParty `json:"recipient"`
+	FBSender    facebookMessengerMessageParty `json:"sender"`
+	FBRecipient facebookMessengerMessageParty `json:"recipient"`
 }
 
 type facebookMessengerWebhookMessageCallbackMessageRecieved struct {
