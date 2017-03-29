@@ -1,4 +1,4 @@
-package pony
+package facebook
 
 import (
 	"bytes"
@@ -14,32 +14,32 @@ import (
 
 /// Service
 
-type facebookMessenger struct {
+type FacebookMessenger struct {
 	id      string
 	webhook *facebookMessengerWebhook
 	sender  *facebookMessengerSender
 }
 
-func NewFacebookMessenger(pageName string, validationToken string, pageToken string) Service {
+func NewFacebookMessenger(pageName string, validationToken string, pageToken string) *FacebookMessenger {
 	id := fmt.Sprintf("com.pony.facebook.messenger.%s", pageName)
 	webhook := &facebookMessengerWebhook{pageName, validationToken, pageToken, &facebookMessengerDecoder{}, make(chan Message, 100)}
 	sender := newFacebookMessengerSender(pageToken)
-	return &facebookMessenger{id, webhook, &sender}
+	return &FacebookMessenger{id, webhook, &sender}
 }
 
-func (fb *facebookMessenger) Setup(mux *http.ServeMux) {
+func (fb *FacebookMessenger) Setup(mux *http.ServeMux) {
 	fb.webhook.addRoutes(mux)
 }
 
-func (fb *facebookMessenger) ID() string {
+func (fb *FacebookMessenger) ID() string {
 	return fb.id
 }
 
-func (fb *facebookMessenger) Send(msg Message) {
-
+func (fb *FacebookMessenger) Send(msg Message) {
+	fb.sender.send(msg)
 }
 
-func (fb *facebookMessenger) ReceiveOn() <-chan Message {
+func (fb *FacebookMessenger) ReceiveOn() <-chan Message {
 	return fb.webhook.receiveOn
 }
 
@@ -353,11 +353,14 @@ func newFacebookMessengerSender(pageToken string) facebookMessengerSender {
 }
 
 // Send sends a message
-func (s *facebookMessengerSender) send(recipient MessageParty, message Message) {
+func (s *facebookMessengerSender) send(message Message) {
+	log.Println("send")
 	// TODO(nl): Recipients
 	textMessage := outgoingTextMessage{message.Text()}
-	payload := outgoingMessagePayload{message.Recipients()[0], textMessage}
+	recipient := facebookMessengerMessageParty{message.Recipients()[0].FacebookMessengerID()}
+	payload := outgoingMessagePayload{recipient, textMessage}
 	payloadData, err := json.Marshal(payload)
+	log.Println(string(payloadData))
 	if err != nil {
 		log.Printf("message.sendHandler.Send Error marshaling %v", err)
 		return
