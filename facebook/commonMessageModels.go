@@ -1,8 +1,8 @@
-package pony
+package facebook
 
 // MessageParty represents a party in a conversation
 type MessageParty interface {
-	ID() string
+	FacebookMessengerID() string
 }
 
 // MessageAttachmentContentType represents the content type of a message attachment
@@ -52,4 +52,36 @@ const (
 type SenderAction struct {
 	Action    senderActionType `json:"sender_action"`
 	Recipient MessageParty     `json:"recipient"`
+}
+
+type basicTextMessage struct {
+	id         string
+	sender     MessageParty
+	recipients []MessageParty
+	text       string
+}
+
+// NewBasicTextMessage is a convenience implementation of a Message with no attachments
+func NewBasicTextMessage(sender MessageParty, recipients []MessageParty, text string) Message {
+	return basicTextMessage{"", sender, recipients, text}
+}
+
+func (m basicTextMessage) ID() string {
+	return m.id
+}
+
+func (m basicTextMessage) Sender() MessageParty {
+	return m.sender
+}
+
+func (m basicTextMessage) Recipients() []MessageParty {
+	return m.recipients
+}
+
+func (m basicTextMessage) Text() string {
+	return m.text
+}
+
+func (m basicTextMessage) Attachments() []MessageAttachment {
+	return []MessageAttachment{}
 }
