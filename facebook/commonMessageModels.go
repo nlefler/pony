@@ -2,7 +2,7 @@ package facebook
 
 // MessageParty represents a party in a conversation
 type MessageParty interface {
-	FacebookMessengerID() string
+	PonyFacebookMessengerID() string
 }
 
 // MessageAttachmentContentType represents the content type of a message attachment

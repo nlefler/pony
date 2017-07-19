@@ -210,16 +210,12 @@ func (a facebookMessengerWebhookMessageCallbackMessageAttachment) Payload() inte
 	return a.AttachmentPayload
 }
 
-type FacebookMessengerParty interface {
-	FacebookMessengerID() string
-}
-
 type facebookMessengerMessageParty struct {
 	FacebookUserID string `json:"id"`
 }
 
 // MessageParty
-func (p facebookMessengerMessageParty) FacebookMessengerID() string {
+func (p facebookMessengerMessageParty) PonyFacebookMessengerID() string {
 	return p.FacebookUserID
 }
 
@@ -357,7 +353,7 @@ func (s *facebookMessengerSender) send(message Message) {
 	log.Println("send")
 	// TODO(nl): Recipients
 	textMessage := outgoingTextMessage{message.Text()}
-	recipient := facebookMessengerMessageParty{message.Recipients()[0].FacebookMessengerID()}
+	recipient := facebookMessengerMessageParty{message.Recipients()[0].PonyFacebookMessengerID()}
 	payload := outgoingMessagePayload{recipient, textMessage}
 	payloadData, err := json.Marshal(payload)
 	log.Println(string(payloadData))
