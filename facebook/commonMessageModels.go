@@ -1,8 +1,11 @@
 package facebook
 
-// MessageParty represents a party in a conversation
-type MessageParty interface {
-	PonyFacebookMessengerID() string
+type ReceivedMessage struct {
+	ID          string
+	Sender      Sender
+	Text        string
+	Attachments []MessageAttachment
+	QuickReply  string
 }
 
 // MessageAttachmentContentType represents the content type of a message attachment
@@ -22,66 +25,55 @@ const (
 )
 
 // MessageAttachment is extra content in a message
-type MessageAttachment interface {
-	Type() MessageAttachmentContentType
-	Payload() interface{}
+type MessageAttachment struct {
+	Type    MessageAttachmentContentType `json:"type"`
+	Payload interface{}                  `json:"payload"`
 }
 
 // Message is a Message
-type Message interface {
-	ID() string
-	Sender() MessageParty
-	Recipients() []MessageParty
-	Text() string
-	Attachments() []MessageAttachment
+type Message struct {
+	ID        string    `json:"-"`
+	Recipient Recipient `json:"recipient"`
+}
+
+// Recipient is the Facebook user who will receive the message
+type Recipient struct {
+	ID string `json:"id"`
+}
+
+type Sender struct {
+	ID string `json:"id"`
+}
+
+// Action is a sender action. It has no message content.
+type Action struct {
+	Message
+	Action SenderActionType `json:"sender_action"`
+}
+
+// ContentMessage is a message with content: text, image, actions, etc
+type ContentMessage struct {
+	Message
+	Text         string            `json:"text"`
+	Attachment   MessageAttachment `json:"attachment,omitempty"`
+	QuickReplies []QuickReplies    `json:"quick_replies,omitempty"`
 }
 
 // SenderActionType is a non-message related action
-type senderActionType string
+type SenderActionType string
 
 const (
 	// MarkSeen a received message as read
-	MarkSeen senderActionType = "mark_seen"
+	MarkSeen SenderActionType = "mark_seen"
 	// TypingOn shows the typing indicator
-	TypingOn senderActionType = "typing_on"
+	TypingOn SenderActionType = "typing_on"
 	// TypingOff disables the typing indicator
-	TypingOff senderActionType = "typing_off"
+	TypingOff SenderActionType = "typing_off"
 )
 
-// SenderAction is a non-message related action
-type SenderAction struct {
-	Action    senderActionType `json:"sender_action"`
-	Recipient MessageParty     `json:"recipient"`
-}
-
-type basicTextMessage struct {
-	id         string
-	sender     MessageParty
-	recipients []MessageParty
-	text       string
-}
-
-// NewBasicTextMessage is a convenience implementation of a Message with no attachments
-func NewBasicTextMessage(sender MessageParty, recipients []MessageParty, text string) Message {
-	return basicTextMessage{"", sender, recipients, text}
-}
-
-func (m basicTextMessage) ID() string {
-	return m.id
-}
-
-func (m basicTextMessage) Sender() MessageParty {
-	return m.sender
-}
-
-func (m basicTextMessage) Recipients() []MessageParty {
-	return m.recipients
-}
-
-func (m basicTextMessage) Text() string {
-	return m.text
-}
-
-func (m basicTextMessage) Attachments() []MessageAttachment {
-	return []MessageAttachment{}
+// QuickReplies represents a quick reply included with a sent message
+type QuickReplies struct {
+	Type    string `json:"content_type"`
+	Title   string `json:"title"`
+	Payload string `json:"payload"`
 }
